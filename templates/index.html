@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Repairs · Crown Jewelry</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260712-1">
+    <script src="{{ url_for('static', path='/app.js') }}?v=20260712-1" defer></script>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="/" aria-label="Crown Jewelry">
+                <img class="sidebar-logo" src="{{ url_for('static', path='/crown-gold-transparent.png') }}" alt="Crown Jewelry">
+                <span class="brand-name">Crown Jewelry</span>
+            </a>
+            <nav class="main-nav" aria-label="Main navigation">
+                <button class="nav-item active" type="button" data-view="orders">
+                    <span class="nav-icon">▤</span><span>Orders</span>
+                </button>
+                <button class="nav-item" type="button" data-view="finances">
+                    <span class="nav-icon">$</span><span>Finances</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="user-avatar">{{ (user_name or user_email or 'C')[:1] | upper }}</span>
+                <span class="user-copy"><strong>{{ user_name or 'Crown Jewelry' }}</strong><small>{{ user_email }}</small></span>
+                <a class="logout" href="/logout" title="Log out">↗</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-title">
+                    <h1 id="page-title">Orders</h1>
+                </div>
+                <div class="topbar-actions">
+                    <span class="sync-status" id="sync-status"><i></i> Live Firestore</span>
+                    <button class="button secondary" id="refresh-button" type="button">Refresh</button>
+                </div>
+            </header>
+
+            <section id="orders-view" class="content-section active" aria-labelledby="orders-title">
+                <div class="section-heading">
+                    <div>
+                        <span class="panel-kicker">Repair ledger</span>
+                        <h2 id="orders-title">Orders</h2>
+                    </div>
+                    <span class="record-count" id="orders-count">— orders</span>
+                </div>
+
+                <div class="status-grid" id="status-grid">
+                    <button class="status-card status-new active" type="button" data-status="">
+                        <span>All</span><strong data-count="all">0</strong>
+                    </button>
+                    <button class="status-card status-new" type="button" data-status="New">
+                        <span>New</span><strong data-count="New">0</strong>
+                    </button>
+                    <button class="status-card status-work" type="button" data-status="InWork">
+                        <span>In work</span><strong data-count="InWork">0</strong>
+                    </button>
+                    <button class="status-card status-ready" type="button" data-status="Ready">
+                        <span>Ready</span><strong data-count="Ready">0</strong>
+                    </button>
+                    <button class="status-card status-picked" type="button" data-status="PickedUp">
+                        <span>Picked up</span><strong data-count="PickedUp">0</strong>
+                    </button>
+                </div>
+
+                <form class="filters-bar" id="orders-filter-form">
+                    <label class="search-field">
+                        <span>Search</span>
+                        <input id="orders-search" type="search" placeholder="Name, phone, order ID">
+                    </label>
+                    <label>
+                        <span>From</span>
+                        <input id="orders-date-from" type="date">
+                    </label>
+                    <label>
+                        <span>To</span>
+                        <input id="orders-date-to" type="date">
+                    </label>
+                    <button class="button primary" type="submit">Apply</button>
+                    <button class="button secondary" id="orders-reset" type="button">Reset</button>
+                </form>
+
+                <div class="orders-grid" id="orders-grid" aria-live="polite">
+                    <article class="loading-card">Loading orders…</article>
+                </div>
+                <div class="pagination-bar">
+                    <span id="orders-pagination-label">—</span>
+                    <div class="pagination-actions">
+                        <button class="icon-button" id="orders-prev" type="button" aria-label="Previous page">←</button>
+                        <button class="icon-button" id="orders-next" type="button" aria-label="Next page">→</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="finances-view" class="content-section" aria-labelledby="finances-title">
+                <div class="section-heading">
+                    <div>
+                        <span class="panel-kicker">Repair finance</span>
+                        <h2 id="finances-title">Finances</h2>
+                    </div>
+                </div>
+
+                <form class="filters-bar finance-filters" id="finance-filter-form">
+                    <div class="period-tabs" role="group" aria-label="Finance period">
+                        <button class="period-tab" type="button" data-period="week">Week</button>
+                        <button class="period-tab active" type="button" data-period="month">Month</button>
+                        <button class="period-tab" type="button" data-period="year">Year</button>
+                        <button class="period-tab" type="button" data-period="all">All</button>
+                    </div>
+                    <label>
+                        <span>From</span>
+                        <input id="finance-date-from" type="date">
+                    </label>
+                    <label>
+                        <span>To</span>
+                        <input id="finance-date-to" type="date">
+                    </label>
+                    <button class="button primary" type="submit">Apply</button>
+                    <button class="button secondary" id="finance-reset" type="button">Reset</button>
+                </form>
+
+                <div class="metrics-grid" id="finance-metrics">
+                    <article class="metric-card featured">
+                        <span class="metric-label">Total orders</span>
+                        <strong class="metric-value skeleton" data-metric="totalValueCents">$0.00</strong>
+                        <span class="metric-change" data-metric-sub="orders">—</span>
+                    </article>
+                    <article class="metric-card status-work">
+                        <span class="metric-label">Open value</span>
+                        <strong class="metric-value skeleton" data-metric="openValueCents">$0.00</strong>
+                        <span class="metric-change">New + In work + Ready</span>
+                    </article>
+                    <article class="metric-card status-ready">
+                        <span class="metric-label">Ready value</span>
+                        <strong class="metric-value skeleton" data-metric="readyValueCents">$0.00</strong>
+                        <span class="metric-change">Ready, not picked up</span>
+                    </article>
+                    <article class="metric-card status-due">
+                        <span class="metric-label">Due</span>
+                        <strong class="metric-value skeleton" data-metric="dueCents">$0.00</strong>
+                        <span class="metric-change negative">Balance due on open orders</span>
+                    </article>
+                </div>
+
+                <article class="panel chart-panel">
+                    <div class="panel-heading chart-heading">
+                        <div>
+                            <span class="panel-kicker">Order value</span>
+                            <h3 id="chart-title">Current month</h3>
+                        </div>
+                        <div class="chart-tabs" role="group" aria-label="Chart period">
+                            <button class="chart-tab" type="button" data-chart="week">Week</button>
+                            <button class="chart-tab active" type="button" data-chart="month">Month</button>
+                            <button class="chart-tab" type="button" data-chart="year">Year</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <div class="chart-empty" id="chart-empty" hidden>No orders in this chart period.</div>
+                        <svg id="orders-chart" class="orders-chart" viewBox="0 0 1000 330" role="img" aria-labelledby="chart-title chart-description"></svg>
+                        <span id="chart-description" class="sr-only">Bar chart of repair order value</span>
+                        <div class="chart-tooltip" id="chart-tooltip" hidden></div>
+                    </div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <dialog id="photo-dialog" class="photo-dialog">
+        <button class="close-button" id="close-photo" type="button" aria-label="Close">×</button>
+        <img id="photo-preview" alt="">
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

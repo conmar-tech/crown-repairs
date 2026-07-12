@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login · Crown Repairs</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260712-1">
+    <script src="https://accounts.google.com/gsi/client?hl=en" async defer></script>
+</head>
+<body class="login-page">
+    <main class="login-card">
+        <img class="login-logo" src="{{ url_for('static', path='/crown-gold-transparent.png') }}" alt="Crown Jewelry">
+        <h1>Repairs</h1>
+        {% if google_client_id %}
+        <div id="google-sign-in" class="google-sign-in"></div>
+        {% else %}
+        <div class="login-error visible">Google Sign-In is not configured for this service.</div>
+        {% endif %}
+        <div class="login-error" id="login-error"></div>
+    </main>
+    {% if google_client_id %}
+    <script>
+        const clientId = {{ google_client_id | tojson }};
+        const errorBox = document.getElementById('login-error');
+
+        window.addEventListener('load', () => {
+            google.accounts.id.disableAutoSelect();
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleCredential,
+                auto_select: false,
+                button_auto_select: false,
+                use_fedcm_for_button: true,
+                hd: 'crownjewelryrepair.com'
+            });
+            google.accounts.id.renderButton(document.getElementById('google-sign-in'), {
+                theme: 'outline', size: 'large', width: 320, shape: 'rectangular',
+                text: 'signin_with', locale: 'en'
+            });
+        });
+
+        async function handleCredential(response) {
+            errorBox.classList.remove('visible');
+            const result = await fetch('/auth/callback', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'CrownRepairs'},
+                body: JSON.stringify({credential: response.credential})
+            });
+            if (result.ok) {
+                window.location.assign('/');
+                return;
+            }
+            const body = await result.json().catch(() => ({}));
+            errorBox.textContent = body.detail || 'Could not sign in with this account.';
+            errorBox.classList.add('visible');
+        }
+    </script>
+    {% endif %}
+</body>
+</html>

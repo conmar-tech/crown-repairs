@@ -1,0 +1,37 @@
+substitutions:
+  _REGION: us-central1
+  _SERVICE: crown-repairs
+  _ARTIFACT_REPO: shopify-sync-repo
+  _IMAGE_NAME: crown-repairs
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --set-env-vars
+      - FIREBASE_PROJECT_ID=${PROJECT_ID},APP_TIMEZONE=America/New_York
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
