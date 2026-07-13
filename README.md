@@ -26,6 +26,7 @@ projects/eloquent-branch-414417/databases/(default)/documents/clients
 ```
 
 See [docs/CLIENT_IMPORT.md](docs/CLIENT_IMPORT.md) for the import process and client document shape.
+Imported legacy clients are tagged as `customerType=retail` and `clientScope=repairs` so they can later sync into the shared Google SQL CRM without changing the tablet workflow.
 
 When a status is changed in the web panel, the document is updated with:
 

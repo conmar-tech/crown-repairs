@@ -504,6 +504,8 @@ def build_clients(records: list[dict[str, Any]], validations: dict[str, dict[str
             "phone": primary.get("phone", ""),
             "phoneDigits": primary.get("phoneDigits", ""),
             "phones": phones,
+            "customerType": "retail",
+            "clientScope": "repairs",
             "address": formatted or primary.get("rawAddress", ""),
             "rawAddress": primary.get("rawAddress", ""),
             "addressVerified": validation.get("status") == "validated",
@@ -520,6 +522,10 @@ def build_clients(records: list[dict[str, Any]], validations: dict[str, dict[str
                 "primaryRowIndex": primary.get("rowIndex", 0),
                 "primaryNumber": primary.get("number", ""),
                 "primaryFile": primary.get("file", ""),
+            },
+            "crmSync": {
+                "target": "google_sql",
+                "status": "pending",
             },
             "sourceRecords": [
                 {

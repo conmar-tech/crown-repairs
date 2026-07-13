@@ -16,6 +16,8 @@ alternateNames[]
 phone
 phoneDigits
 phones[]
+customerType
+clientScope
 address
 rawAddress
 addressVerified
@@ -23,6 +25,7 @@ addressVerificationStatus
 addressVerification
 addressCandidates[]
 source
+crmSync
 sourceRecords[]
 legacyNumbers[]
 legacyFiles[]
@@ -55,6 +58,19 @@ https://docs.google.com/spreadsheets/d/1ULEzPvmzx3UM0bj_3B1pn9_yLb8cvEQksi6B4HB1
 ```
 
 Do not commit files under `imports/`; they contain customer names, phones, and addresses.
+
+Imported legacy repair-card clients are retail clients in the repair workflow:
+
+```text
+customerType = "retail"
+clientScope = "repairs"
+crmSync.target = "google_sql"
+crmSync.status = "pending"
+```
+
+The tablet can update these Firestore client documents when a seller selects an
+old client and corrects the primary phone or address. The future Google SQL CRM
+should consume these documents as the repair/retail subset.
 
 ## Address Verification
 
