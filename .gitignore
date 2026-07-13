@@ -6,4 +6,5 @@ venv/
 .env
 *.db
 *.sqlite
+imports/
 .DS_Store

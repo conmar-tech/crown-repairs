@@ -19,6 +19,14 @@ projects/eloquent-branch-414417/databases/(default)/documents/repairOrders
 
 Photos, signatures, and labels are read from Firebase Storage download URLs already written into each Firestore order by the tablet app.
 
+Legacy customer contacts imported from scanned repair cards are stored in:
+
+```text
+projects/eloquent-branch-414417/databases/(default)/documents/clients
+```
+
+See [docs/CLIENT_IMPORT.md](docs/CLIENT_IMPORT.md) for the import process and client document shape.
+
 When a status is changed in the web panel, the document is updated with:
 
 - `orderStatus`
