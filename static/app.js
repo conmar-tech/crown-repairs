@@ -221,19 +221,24 @@ function orderCard(order) {
 
     const title = document.createElement('div');
     title.className = 'order-title';
+    const idRow = document.createElement('div');
+    idRow.className = 'order-id-row';
     const id = document.createElement('span');
     id.className = 'order-id';
     id.textContent = order.orderId;
+    const dateTime = document.createElement('span');
+    dateTime.className = 'order-date';
+    dateTime.textContent = displayDateTime(order.createdAt);
+    idRow.append(id, dateTime);
     const name = document.createElement('h3');
     name.textContent = order.customerName || 'No customer name';
     const meta = document.createElement('div');
     meta.className = 'order-meta';
     meta.append(
-        metaLine(order.customerPhone || 'No phone'),
-        metaLine(displayDateTime(order.createdAt)),
+        metaLine(order.customerPhone || 'No phone', 'customer-phone'),
         metaLine(order.customerAddress || 'No address'),
     );
-    title.append(id, name, meta);
+    title.append(idRow, name, meta);
 
     const statusActions = document.createElement('div');
     statusActions.className = 'status-actions';
@@ -330,8 +335,9 @@ function orderCard(order) {
     return card;
 }
 
-function metaLine(text) {
+function metaLine(text, className = '') {
     const span = document.createElement('span');
+    if (className) span.className = className;
     span.textContent = text;
     return span;
 }

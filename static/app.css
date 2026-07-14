@@ -163,10 +163,13 @@ button { color: inherit; }
 }
 .client-photo img { width: 100%; height: 100%; object-fit: cover; }
 .order-title { min-width: 0; }
-.order-id { display: block; color: var(--gold); font-size: 10px; font-weight: 850; letter-spacing: .08em; }
+.order-id-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.order-id { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gold); font-size: 10px; font-weight: 850; letter-spacing: .08em; }
+.order-date { grid-column: 2; color: #5e6875; font-size: 11px; font-weight: 750; text-align: center; white-space: nowrap; }
 .order-title h3 { margin: 6px 0 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; font-weight: 650; letter-spacing: -.02em; }
 .order-meta { display: grid; gap: 4px; color: #5e6875; font-size: 12px; }
 .order-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-meta .customer-phone { color: var(--ink); font-weight: 900; }
 .status-select {
     width: 100%; height: 44px; padding: 0 11px; border: 1px solid #d6dbe1; border-radius: 12px; background: white;
     color: var(--ink); font-size: 12px; font-weight: 750; outline: none;
