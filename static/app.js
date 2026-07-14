@@ -280,8 +280,10 @@ function orderCard(order) {
     moneyRow.append(
         moneyChip('Price', order.totalPriceCents),
         moneyChip('Deposit', order.depositPaidCents),
-        moneyChip('Due', order.balanceDueCents, 'due'),
     );
+    if (Number(order.balanceDueCents || 0) > 0) {
+        moneyRow.append(moneyChip('Due', order.balanceDueCents, 'due'));
+    }
 
     const photos = document.createElement('div');
     photos.className = 'photo-strip';
