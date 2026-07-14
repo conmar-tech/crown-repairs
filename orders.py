@@ -103,7 +103,11 @@ class FirestoreOrderRepository:
                 "createdAt",
                 direction=firestore.Query.DESCENDING,
             ).limit(2000).stream(timeout=10)
-            return [self._decode(snapshot) for snapshot in snapshots]
+            return [
+                self._decode(snapshot)
+                for snapshot in snapshots
+                if not self._is_deleted(snapshot.to_dict() or {})
+            ]
         except (GoogleAPICallError, GoogleAuthError) as exc:
             raise RepairsRepositoryError(str(exc)) from exc
 
@@ -242,13 +246,26 @@ class FirestoreOrderRepository:
         except (GoogleAPICallError, GoogleAuthError) as exc:
             raise RepairsRepositoryError(str(exc)) from exc
 
-    def delete_order(self, order_id: str) -> bool:
+    def delete_order(self, order_id: str, user_email: str = "") -> bool:
         reference = self.collection.document(order_id)
         try:
             snapshot = reference.get(timeout=10)
             if not snapshot.exists:
                 return False
-            reference.delete(timeout=10)
+            reference.update(
+                {
+                    "isDeleted": True,
+                    "deletedAt": firestore.SERVER_TIMESTAMP,
+                    "deletedBy": user_email,
+                    "revision": firestore.Increment(1),
+                    "updatedAt": firestore.SERVER_TIMESTAMP,
+                    "adminUpdatedAt": firestore.SERVER_TIMESTAMP,
+                    "updatedBy": user_email,
+                    "lastModifiedDeviceId": "web-admin",
+                    "source.lastModifiedDeviceId": "web-admin",
+                },
+                timeout=10,
+            )
             return True
         except NotFound:
             return False
@@ -332,6 +349,9 @@ class FirestoreOrderRepository:
             "lastModifiedDeviceId": str(data.get("lastModifiedDeviceId") or ""),
             "updatedBy": str(data.get("updatedBy") or ""),
             "syncState": str(data.get("syncState") or "Synced"),
+            "isDeleted": self._is_deleted(data),
+            "deletedAt": self._timestamp_string(data.get("deletedAt")),
+            "deletedBy": str(data.get("deletedBy") or ""),
         }
         order["statusRank"] = STATUS_ORDER.get(order["orderStatus"], 0)
         order["itemType"] = self._item_type(order["workTemplates"])
@@ -609,6 +629,10 @@ class FirestoreOrderRepository:
         return ""
 
     @staticmethod
+    def _is_deleted(data: dict) -> bool:
+        return bool(data.get("isDeleted")) or data.get("deletedAt") is not None
+
+    @staticmethod
     def _string_list(value) -> list[str]:
         if isinstance(value, list):
             return [str(item) for item in value if str(item).strip()]
@@ -682,7 +706,7 @@ class SampleOrderRepository:
 
     def all_orders(self) -> list[dict]:
         if self._orders is not None:
-            return [dict(order) for order in self._orders]
+            return [dict(order) for order in self._orders if not order.get("isDeleted")]
 
         today = datetime.now(self.settings.timezone).date()
         self._orders = [
@@ -737,7 +761,7 @@ class SampleOrderRepository:
                 22000,
             ),
         ]
-        return [dict(order) for order in self._orders]
+        return [dict(order) for order in self._orders if not order.get("isDeleted")]
 
     def list_orders(
         self,
@@ -832,12 +856,19 @@ class SampleOrderRepository:
                 return dict(order)
         return None
 
-    def delete_order(self, order_id: str) -> bool:
+    def delete_order(self, order_id: str, user_email: str = "") -> bool:
         if self._orders is None:
             self.all_orders()
-        before = len(self._orders or [])
-        self._orders = [order for order in (self._orders or []) if order["id"] != order_id]
-        return len(self._orders) != before
+        for order in self._orders or []:
+            if order["id"] == order_id:
+                order["isDeleted"] = True
+                order["deletedAt"] = datetime.now(self.settings.timezone).isoformat()
+                order["deletedBy"] = user_email
+                order["lastModifiedDeviceId"] = "web-admin"
+                order["updatedBy"] = user_email
+                order["revision"] += 1
+                return True
+        return False
 
     def all_clients(self) -> list[dict]:
         helper = FirestoreOrderRepository(self.settings)
@@ -916,6 +947,9 @@ class SampleOrderRepository:
             "statusRank": STATUS_ORDER[status],
             "sampleItemType": item_type,
             "syncState": "Synced",
+            "isDeleted": False,
+            "deletedAt": "",
+            "deletedBy": "",
             "itemType": FirestoreOrderRepository._item_type(templates),
             "serviceNames": FirestoreOrderRepository._service_names(templates),
             "manualWorkNotes": "",

@@ -210,7 +210,10 @@ async def update_order_payment(request: Request, order_id: str, payload: Payment
 async def delete_order(request: Request, order_id: str):
     _require_same_origin_action(request)
     try:
-        deleted = repository.delete_order(order_id)
+        deleted = repository.delete_order(
+            order_id,
+            user_email=str(getattr(request.state, "user_email", "")),
+        )
     except RepairsRepositoryError as exc:
         raise _repo_error(exc) from exc
     if not deleted:

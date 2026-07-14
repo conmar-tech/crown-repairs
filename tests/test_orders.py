@@ -54,3 +54,14 @@ def test_sample_payment_update_recalculates_due_for_sync():
     assert updated["balanceDueCents"] == 17_500
     assert updated["revision"] == revision + 1
     assert updated["lastModifiedDeviceId"] == "web-admin"
+
+
+def test_sample_delete_soft_hides_order_from_lists():
+    repo = sample_repo()
+    order = repo.list_orders(status="InWork")["items"][0]
+
+    deleted = repo.delete_order(order["id"], user_email="test@example.com")
+
+    assert deleted is True
+    assert repo.list_orders(code=order["orderCodeSuffix"])["total"] == 0
+    assert all(item["id"] != order["id"] for item in repo.all_orders())

@@ -568,7 +568,7 @@ function updateOrderPayment(order, totalPriceCents, depositPaidCents) {
 }
 
 async function deleteOrder(order) {
-    const confirmed = window.confirm(`Delete order ${order.orderId} from Firestore?`);
+    const confirmed = window.confirm(`Delete order ${order.orderId}? It will be hidden from web and tablet.`);
     if (!confirmed) return;
     try {
         await api(`/api/orders/${encodeURIComponent(order.id)}`, {
