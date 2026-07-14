@@ -90,6 +90,20 @@ function cents(value) {
     return money.format((Number(value) || 0) / 100);
 }
 
+function centsToMoneyInput(value) {
+    return ((Number(value) || 0) / 100).toFixed(2);
+}
+
+function moneyInputToCents(value) {
+    const normalized = String(value || '').trim().replace(/[$,\s]/g, '');
+    if (!normalized) return 0;
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        throw new Error('Enter a valid non-negative amount.');
+    }
+    return Math.round(parsed * 100);
+}
+
 function onlyDigits(value) {
     return String(value || '').replace(/\D/g, '');
 }
@@ -279,15 +293,7 @@ function orderCard(order) {
     }
 
     const notes = order.manualWorkNotes || manualWorkNotes(order.workDescription || '', order.workTemplates || []);
-    const moneyRow = document.createElement('div');
-    moneyRow.className = 'money-row';
-    moneyRow.append(
-        moneyChip('Price', order.totalPriceCents),
-        moneyChip('Deposit', order.depositPaidCents),
-    );
-    if (Number(order.balanceDueCents || 0) > 0) {
-        moneyRow.append(moneyChip('Due', order.balanceDueCents, 'due'));
-    }
+    const payment = paymentPanel(order);
 
     const photos = document.createElement('div');
     photos.className = 'photo-strip';
@@ -310,7 +316,7 @@ function orderCard(order) {
         notesLine.textContent = notes;
         body.append(notesLine);
     }
-    body.append(moneyRow);
+    body.append(payment);
     if (photos.childElementCount) body.append(photos);
 
     const footer = document.createElement('div');
@@ -369,6 +375,115 @@ function moneyChip(label, value, extra = '') {
     valueNode.textContent = cents(value);
     chip.append(labelNode, valueNode);
     return chip;
+}
+
+function paymentPanel(order) {
+    const container = document.createElement('div');
+    container.className = 'payment-panel';
+    renderPaymentSummary(container, order);
+    return container;
+}
+
+function renderPaymentSummary(container, order) {
+    const row = document.createElement('div');
+    row.className = 'money-row';
+    row.append(
+        moneyChip('Price', order.totalPriceCents),
+        moneyChip('Deposit', order.depositPaidCents),
+    );
+    if (Number(order.balanceDueCents || 0) > 0) {
+        row.append(moneyChip('Due', order.balanceDueCents, 'due'));
+    }
+
+    const edit = document.createElement('button');
+    edit.className = 'link-button payment-edit-button';
+    edit.type = 'button';
+    edit.textContent = 'Edit';
+    edit.addEventListener('click', () => renderPaymentEditor(container, order));
+    row.append(edit);
+    container.replaceChildren(row);
+}
+
+function renderPaymentEditor(container, order) {
+    const form = document.createElement('form');
+    form.className = 'payment-editor';
+
+    const totalInput = paymentInput('Price', order.totalPriceCents);
+    const depositInput = paymentInput('Deposit', order.depositPaidCents);
+    const due = document.createElement('span');
+    due.className = 'payment-due-preview';
+
+    const updateDue = () => {
+        try {
+            const total = moneyInputToCents(totalInput.input.value);
+            const deposit = moneyInputToCents(depositInput.input.value);
+            due.textContent = `Due ${cents(Math.max(total - deposit, 0))}`;
+            due.classList.toggle('due', total > deposit);
+        } catch {
+            due.textContent = 'Due -';
+            due.classList.remove('due');
+        }
+    };
+    totalInput.input.addEventListener('input', updateDue);
+    depositInput.input.addEventListener('input', updateDue);
+    updateDue();
+
+    const save = document.createElement('button');
+    save.className = 'button primary small';
+    save.type = 'submit';
+    save.textContent = 'Save';
+
+    const cancel = document.createElement('button');
+    cancel.className = 'button secondary small';
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => renderPaymentSummary(container, order));
+
+    form.append(totalInput.label, depositInput.label, due, save, cancel);
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        let totalPriceCents;
+        let depositPaidCents;
+        try {
+            totalPriceCents = moneyInputToCents(totalInput.input.value);
+            depositPaidCents = moneyInputToCents(depositInput.input.value);
+        } catch (error) {
+            showToast(error.message, true);
+            return;
+        }
+
+        save.disabled = true;
+        cancel.disabled = true;
+        try {
+            const updated = await updateOrderPayment(order, totalPriceCents, depositPaidCents);
+            Object.assign(order, updated);
+            showToast(`Updated payment for ${order.orderId}`);
+            await reloadAfterMutation();
+        } catch (error) {
+            showToast(error.message, true);
+            save.disabled = false;
+            cancel.disabled = false;
+        }
+    });
+
+    container.replaceChildren(form);
+    totalInput.input.focus();
+    totalInput.input.select();
+}
+
+function paymentInput(labelText, centsValue) {
+    const label = document.createElement('label');
+    label.className = 'payment-input';
+    const text = document.createElement('span');
+    text.textContent = labelText;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '0.01';
+    input.inputMode = 'decimal';
+    input.value = centsToMoneyInput(centsValue);
+    label.append(text, input);
+    return {label, input};
 }
 
 function addFileLink(container, url, label) {
@@ -441,6 +556,14 @@ function updateOrderStatus(order, status, settleBalance = false) {
         method: 'PATCH',
         headers: {'Content-Type': 'application/json', 'X-Requested-With': 'CrownRepairs'},
         body: JSON.stringify({status, settleBalance}),
+    });
+}
+
+function updateOrderPayment(order, totalPriceCents, depositPaidCents) {
+    return api(`/api/orders/${encodeURIComponent(order.id)}/payment`, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'CrownRepairs'},
+        body: JSON.stringify({totalPriceCents, depositPaidCents}),
     });
 }
 

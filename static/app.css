@@ -193,6 +193,25 @@ button { color: inherit; }
 .money-chip { padding: 7px 9px; border-radius: 9px; color: #495361; background: rgba(255,255,255,.58); font-size: 11px; font-weight: 820; }
 .money-chip strong { color: var(--ink); font-size: 12px; font-weight: 900; }
 .money-chip.due strong { color: var(--red); }
+.payment-panel { min-width: 0; }
+.payment-edit-button { align-self: center; min-height: 28px; padding: 0 8px; border-radius: 8px; background: rgba(255,255,255,.58); }
+.payment-editor {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px;
+    padding: 9px; border: 1px solid rgba(179,138,74,.24); border-radius: 12px;
+    background: rgba(255,255,255,.58);
+}
+.payment-input { display: grid; gap: 4px; min-width: 106px; }
+.payment-input span { color: var(--muted); font-size: 10px; font-weight: 800; }
+.payment-input input {
+    width: 106px; height: 34px; padding: 0 9px; border: 1px solid #d8dde2; border-radius: 9px;
+    outline: none; color: var(--ink); background: white; font-size: 12px; font-weight: 850;
+}
+.payment-input input:focus { border-color: #b89a64; box-shadow: 0 0 0 3px rgba(179,138,74,.12); }
+.payment-due-preview {
+    min-height: 30px; padding: 7px 9px; border-radius: 9px; align-self: flex-end;
+    color: #495361; background: #edf8f2; font-size: 11px; font-weight: 900;
+}
+.payment-due-preview.due { color: var(--red); background: #fff0f2; }
 .photo-strip { display: flex; gap: 9px; overflow-x: auto; padding-bottom: 2px; }
 .thumb {
     flex: 0 0 auto; width: 72px; height: 72px; border: 1px solid rgba(16,36,60,.12); border-radius: 9px; overflow: hidden;

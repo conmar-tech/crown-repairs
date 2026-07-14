@@ -205,6 +205,43 @@ class FirestoreOrderRepository:
         except (GoogleAPICallError, GoogleAuthError) as exc:
             raise RepairsRepositoryError(str(exc)) from exc
 
+    def update_payment(
+        self,
+        order_id: str,
+        total_price_cents: int,
+        deposit_paid_cents: int,
+        user_email: str,
+    ) -> dict | None:
+        total_price_cents = max(self._int(total_price_cents), 0)
+        deposit_paid_cents = max(self._int(deposit_paid_cents), 0)
+        balance_due_cents = max(total_price_cents - deposit_paid_cents, 0)
+
+        reference = self.collection.document(order_id)
+        try:
+            snapshot = reference.get(timeout=10)
+            if not snapshot.exists:
+                return None
+
+            reference.update(
+                {
+                    "payment.totalPriceCents": total_price_cents,
+                    "payment.depositPaidCents": deposit_paid_cents,
+                    "payment.balanceDueCents": balance_due_cents,
+                    "revision": firestore.Increment(1),
+                    "updatedAt": firestore.SERVER_TIMESTAMP,
+                    "adminUpdatedAt": firestore.SERVER_TIMESTAMP,
+                    "updatedBy": user_email,
+                    "lastModifiedDeviceId": "web-admin",
+                    "source.lastModifiedDeviceId": "web-admin",
+                },
+                timeout=10,
+            )
+            return self._decode(reference.get(timeout=10))
+        except NotFound:
+            return None
+        except (GoogleAPICallError, GoogleAuthError) as exc:
+            raise RepairsRepositoryError(str(exc)) from exc
+
     def delete_order(self, order_id: str) -> bool:
         reference = self.collection.document(order_id)
         try:
@@ -770,6 +807,28 @@ class SampleOrderRepository:
                 order["updatedBy"] = user_email
                 order["revision"] += 1
                 order["statusRank"] = STATUS_ORDER.get(status, 0)
+                return dict(order)
+        return None
+
+    def update_payment(
+        self,
+        order_id: str,
+        total_price_cents: int,
+        deposit_paid_cents: int,
+        user_email: str,
+    ) -> dict | None:
+        if self._orders is None:
+            self.all_orders()
+        total_price_cents = max(FirestoreOrderRepository._int(total_price_cents), 0)
+        deposit_paid_cents = max(FirestoreOrderRepository._int(deposit_paid_cents), 0)
+        for order in self._orders or []:
+            if order["id"] == order_id:
+                order["totalPriceCents"] = total_price_cents
+                order["depositPaidCents"] = deposit_paid_cents
+                order["balanceDueCents"] = max(total_price_cents - deposit_paid_cents, 0)
+                order["lastModifiedDeviceId"] = "web-admin"
+                order["updatedBy"] = user_email
+                order["revision"] += 1
                 return dict(order)
         return None
 

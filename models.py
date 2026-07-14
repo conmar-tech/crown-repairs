@@ -16,3 +16,8 @@ class GoogleCredential(BaseModel):
 class StatusPayload(BaseModel):
     status: OrderStatus
     settleBalance: bool = False
+
+
+class PaymentPayload(BaseModel):
+    totalPriceCents: int = Field(ge=0)
+    depositPaidCents: int = Field(ge=0)

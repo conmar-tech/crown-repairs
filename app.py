@@ -17,7 +17,7 @@ from auth import (
     install_auth_middleware,
     verify_google_credential,
 )
-from models import GoogleCredential, StatusPayload
+from models import GoogleCredential, PaymentPayload, StatusPayload
 from orders import (
     FirestoreOrderRepository,
     FirestoreSettings,
@@ -181,6 +181,23 @@ async def update_order_status(request: Request, order_id: str, payload: StatusPa
             status=payload.status,
             user_email=str(getattr(request.state, "user_email", "")),
             settle_balance=payload.settleBalance,
+        )
+    except RepairsRepositoryError as exc:
+        raise _repo_error(exc) from exc
+    if not updated:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return updated
+
+
+@app.patch("/api/orders/{order_id}/payment")
+async def update_order_payment(request: Request, order_id: str, payload: PaymentPayload):
+    _require_same_origin_action(request)
+    try:
+        updated = repository.update_payment(
+            order_id=order_id,
+            total_price_cents=payload.totalPriceCents,
+            deposit_paid_cents=payload.depositPaidCents,
+            user_email=str(getattr(request.state, "user_email", "")),
         )
     except RepairsRepositoryError as exc:
         raise _repo_error(exc) from exc

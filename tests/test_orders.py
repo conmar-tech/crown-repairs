@@ -34,3 +34,23 @@ def test_sample_picked_up_can_settle_balance():
     assert updated["orderStatus"] == "PickedUp"
     assert updated["depositPaidCents"] == updated["totalPriceCents"]
     assert updated["balanceDueCents"] == 0
+
+
+def test_sample_payment_update_recalculates_due_for_sync():
+    repo = sample_repo()
+    order = repo.list_orders(status="InWork")["items"][0]
+    revision = order["revision"]
+
+    updated = repo.update_payment(
+        order["id"],
+        total_price_cents=25_000,
+        deposit_paid_cents=7_500,
+        user_email="test@example.com",
+    )
+
+    assert updated is not None
+    assert updated["totalPriceCents"] == 25_000
+    assert updated["depositPaidCents"] == 7_500
+    assert updated["balanceDueCents"] == 17_500
+    assert updated["revision"] == revision + 1
+    assert updated["lastModifiedDeviceId"] == "web-admin"
