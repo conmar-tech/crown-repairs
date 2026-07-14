@@ -53,7 +53,6 @@ const elements = {
     ordersPhoneSearch: document.getElementById('orders-phone-search'),
     ordersCodeSearch: document.getElementById('orders-code-search'),
     ordersCodeClear: document.getElementById('orders-code-clear'),
-    ordersScan: document.getElementById('orders-scan'),
     ordersDateFrom: document.getElementById('orders-date-from'),
     ordersDateTo: document.getElementById('orders-date-to'),
     ordersFilterForm: document.getElementById('orders-filter-form'),
@@ -832,15 +831,6 @@ elements.ordersReset.addEventListener('click', async () => {
 elements.ordersCodeClear.addEventListener('click', async () => {
     elements.ordersCodeSearch.value = '';
     state.codeQuery = '';
-    state.offset = 0;
-    await loadOrders().catch(error => showToast(error.message, true));
-});
-
-elements.ordersScan.addEventListener('click', async () => {
-    const value = window.prompt('Scan or enter order code');
-    if (value === null) return;
-    elements.ordersCodeSearch.value = value.trim();
-    state.codeQuery = value.trim();
     state.offset = 0;
     await loadOrders().catch(error => showToast(error.message, true));
 });
