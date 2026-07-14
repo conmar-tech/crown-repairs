@@ -229,12 +229,14 @@ button { color: inherit; }
 .client-card-body { min-width: 0; display: grid; gap: 7px; }
 .client-card-body strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
 .client-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #5e6875; font-size: 12px; }
+.client-contact { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-phone { color: var(--ink); font-size: 12px; font-weight: 900; }
 .client-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .client-chip {
-    padding: 6px 8px; border-radius: 999px; color: #445060; background: #f3f5f7; font-size: 10px; font-weight: 800;
+    padding: 6px 9px; border-radius: 7px; color: #445060; background: #f3f5f7; font-size: 10px; font-weight: 850;
 }
 .client-chip.orders { background: var(--gold-soft); color: #6a4f25; }
-.client-chip.due { background: #fff0f2; color: var(--red); }
+.client-chip.due { background: #fff0f2; color: var(--red); border: 1px solid rgba(196,72,72,.28); }
 
 .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 16px; }
 .metric-card {

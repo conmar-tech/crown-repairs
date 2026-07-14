@@ -510,17 +510,31 @@ function clientCard(client) {
     body.className = 'client-card-body';
     const name = document.createElement('strong');
     name.textContent = client.name || 'No customer name';
+    const contact = document.createElement('span');
+    contact.className = 'client-contact';
+    const phone = document.createElement('strong');
+    phone.className = 'client-phone';
+    phone.textContent = client.phone || 'No phone';
+    contact.append(phone);
+    if (client.address) {
+        contact.append(document.createTextNode(` · ${client.address}`));
+    }
     const meta = document.createElement('span');
     meta.className = 'client-meta';
-    meta.textContent = [client.phone || 'No phone', client.address || 'No address'].join(' · ');
+    meta.append(contact);
     const chips = document.createElement('span');
     chips.className = 'client-chips';
-    chips.append(
-        clientChip(`${client.orderCount || 0} orders`, 'orders'),
-        clientChip(`Due ${cents(client.dueCents)}`, Number(client.dueCents || 0) > 0 ? 'due' : ''),
-        clientChip(client.lastOrderAt ? `Last ${displayDateTime(client.lastOrderAt)}` : 'No recent order', ''),
-    );
-    body.append(name, meta, chips);
+    if (Number(client.orderCount || 0) > 0) {
+        chips.append(clientChip(`${client.orderCount} orders`, 'orders'));
+    }
+    if (Number(client.dueCents || 0) > 0) {
+        chips.append(clientChip(`Due ${cents(client.dueCents)}`, 'due'));
+    }
+    if (client.lastOrderAt) {
+        chips.append(clientChip(`Last ${displayDateTime(client.lastOrderAt)}`, ''));
+    }
+    body.append(name, meta);
+    if (chips.childElementCount) body.append(chips);
 
     card.append(photo, body);
     return card;
