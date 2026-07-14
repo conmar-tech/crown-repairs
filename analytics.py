@@ -9,10 +9,11 @@ from typing import Iterable
 STATUS_LABELS = {
     "New": "New",
     "InWork": "In work",
+    "AtJeweler": "At Jeweler",
     "Ready": "Ready",
     "PickedUp": "Picked up",
 }
-OPEN_STATUSES = {"New", "InWork", "Ready"}
+OPEN_STATUSES = {"New", "InWork", "AtJeweler", "Ready"}
 
 
 def date_range_for_period(period: str, today: date) -> tuple[date | None, date | None]:
@@ -87,7 +88,8 @@ def build_finance_dashboard(
             "orders": len(filtered),
             "totalValueCents": total_value,
             "openValueCents": open_value,
-            "inWorkValueCents": status_amounts["InWork"],
+            "inWorkValueCents": status_amounts["InWork"] + status_amounts["AtJeweler"],
+            "atJewelerValueCents": status_amounts["AtJeweler"],
             "readyValueCents": status_amounts["Ready"],
             "dueCents": open_due,
             "depositCents": deposits,

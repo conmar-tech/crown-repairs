@@ -54,7 +54,7 @@ def test_finance_summary_open_due_excludes_picked_up():
     assert dashboard["summary"]["readyValueCents"] == 30_000
     assert dashboard["summary"]["dueCents"] == 43_000
     assert dashboard["summary"]["depositCents"] == 57_000
-    assert dashboard["statusCounts"] == {"New": 1, "InWork": 1, "Ready": 1, "PickedUp": 1}
+    assert dashboard["statusCounts"] == {"New": 1, "InWork": 1, "AtJeweler": 0, "Ready": 1, "PickedUp": 1}
 
 
 def test_finance_date_filter():

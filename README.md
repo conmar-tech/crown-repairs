@@ -4,7 +4,8 @@ Internal Crown Jewelry web panel for repair orders created on the Android tablet
 
 The panel intentionally does not include the customer intake form. It provides only staff/admin views:
 
-- **Orders**: repair order cards, customer/item photos, search, filters, and status changes.
+- **Orders**: repair order cards, customer/item photos, status/date/client/code filters, deletion, and status changes.
+- **Clients**: searchable client list with order counts and one-click filtering back to Orders.
 - **Finances**: totals, open order value, ready value, due balance, and week/month/year charts.
 
 The UI follows the same lightweight pattern as `conmar-tech/crown-kassa`: FastAPI, Jinja templates, static CSS/JavaScript, Google Sign-In, and Cloud Run-ready packaging.
@@ -37,6 +38,10 @@ When a status is changed in the web panel, the document is updated with:
 - `updatedBy`
 - `lastModifiedDeviceId = "web-admin"`
 - `source.lastModifiedDeviceId = "web-admin"`
+
+If a `Ready` order is marked `PickedUp` while it still has `balanceDueCents > 0`, the UI asks for confirmation. Confirming sends `settleBalance=true`, which sets `payment.depositPaidCents` to the order total and `payment.balanceDueCents` to `0`.
+
+Deleting an order removes the `repairOrders/{orderId}` Firestore document after a browser confirmation. Storage files are not deleted by this action.
 
 The tablet app uses those fields to pull the cloud change back into its local Room database.
 
@@ -75,6 +80,7 @@ python main.py
 |---|---|
 | `FIREBASE_PROJECT_ID` | Google/Firebase project id, defaults to `eloquent-branch-414417` |
 | `REPAIR_ORDERS_COLLECTION` | Firestore collection, defaults to `repairOrders` |
+| `REPAIR_CLIENTS_COLLECTION` | Firestore clients collection, defaults to `clients` |
 | `APP_TIMEZONE` | Business timezone, defaults to `America/New_York` |
 | `GOOGLE_CLIENT_ID` | Google OAuth web client id |
 | `SESSION_SECRET` | HMAC session signing key |

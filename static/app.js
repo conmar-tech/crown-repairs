@@ -5,9 +5,21 @@ const state = {
     limit: 50,
     offset: 0,
     status: '',
-    query: '',
+    nameQuery: '',
+    phoneQuery: '',
+    codeQuery: '',
+    ordersPeriod: '',
     ordersDateFrom: '',
     ordersDateTo: '',
+    clientKey: '',
+    clientName: '',
+    clientPhone: '',
+    clients: [],
+    clientsTotal: 0,
+    clientsLimit: 100,
+    clientsOffset: 0,
+    clientsQuery: '',
+    clientsSort: 'recent',
     financePeriod: 'month',
     chartPeriod: 'month',
     financeDateFrom: '',
@@ -21,7 +33,15 @@ const compactNumber = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1})
 const dateTimeFormat = new Intl.DateTimeFormat('en-US', {month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit'});
 const dateFormat = new Intl.DateTimeFormat('en-US', {month: 'short', day: '2-digit', year: 'numeric'});
 const svgNS = 'http://www.w3.org/2000/svg';
-const statusLabels = {New: 'New', InWork: 'In work', Ready: 'Ready', PickedUp: 'Picked up'};
+
+const statusLabels = {
+    New: 'New',
+    InWork: 'In Work',
+    AtJeweler: 'At Jeweler',
+    Ready: 'Ready',
+    PickedUp: 'Picked Up',
+};
+const statusOptions = ['New', 'InWork', 'AtJeweler', 'Ready', 'PickedUp'];
 
 const elements = {
     pageTitle: document.getElementById('page-title'),
@@ -29,14 +49,30 @@ const elements = {
     refreshButton: document.getElementById('refresh-button'),
     ordersGrid: document.getElementById('orders-grid'),
     ordersCount: document.getElementById('orders-count'),
-    ordersSearch: document.getElementById('orders-search'),
+    ordersNameSearch: document.getElementById('orders-name-search'),
+    ordersPhoneSearch: document.getElementById('orders-phone-search'),
+    ordersCodeSearch: document.getElementById('orders-code-search'),
+    ordersCodeClear: document.getElementById('orders-code-clear'),
+    ordersScan: document.getElementById('orders-scan'),
     ordersDateFrom: document.getElementById('orders-date-from'),
     ordersDateTo: document.getElementById('orders-date-to'),
     ordersFilterForm: document.getElementById('orders-filter-form'),
     ordersReset: document.getElementById('orders-reset'),
+    activeClientFilter: document.getElementById('active-client-filter'),
+    activeClientFilterText: document.getElementById('active-client-filter-text'),
+    clearClientFilter: document.getElementById('clear-client-filter'),
     ordersPrev: document.getElementById('orders-prev'),
     ordersNext: document.getElementById('orders-next'),
     ordersPaginationLabel: document.getElementById('orders-pagination-label'),
+    clientsGrid: document.getElementById('clients-grid'),
+    clientsCount: document.getElementById('clients-count'),
+    clientsSearch: document.getElementById('clients-search'),
+    clientsSort: document.getElementById('clients-sort'),
+    clientsFilterForm: document.getElementById('clients-filter-form'),
+    clientsReset: document.getElementById('clients-reset'),
+    clientsPrev: document.getElementById('clients-prev'),
+    clientsNext: document.getElementById('clients-next'),
+    clientsPaginationLabel: document.getElementById('clients-pagination-label'),
     financeFilterForm: document.getElementById('finance-filter-form'),
     financeDateFrom: document.getElementById('finance-date-from'),
     financeDateTo: document.getElementById('finance-date-to'),
@@ -55,6 +91,10 @@ function cents(value) {
     return money.format((Number(value) || 0) / 100);
 }
 
+function onlyDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
 function parseDateTime(value) {
     if (!value) return null;
     const parsed = new Date(value);
@@ -63,11 +103,11 @@ function parseDateTime(value) {
 
 function displayDateTime(value) {
     const parsed = parseDateTime(value);
-    return parsed ? dateTimeFormat.format(parsed) : '—';
+    return parsed ? dateTimeFormat.format(parsed) : '-';
 }
 
 function displayDate(value) {
-    if (!value) return '';
+    if (!value) return '-';
     const parsed = new Date(`${value}T12:00:00`);
     return Number.isNaN(parsed.getTime()) ? value : dateFormat.format(parsed);
 }
@@ -94,9 +134,16 @@ function setConnectionState(ok) {
 async function loadOrders() {
     const params = new URLSearchParams({limit: state.limit, offset: state.offset});
     if (state.status) params.set('status', state.status);
-    if (state.query) params.set('q', state.query);
+    if (state.nameQuery) params.set('name', state.nameQuery);
+    if (state.phoneQuery) params.set('phone', state.phoneQuery);
+    if (state.codeQuery) params.set('code', state.codeQuery);
+    if (state.ordersPeriod) params.set('period', state.ordersPeriod);
     if (state.ordersDateFrom) params.set('date_from', state.ordersDateFrom);
     if (state.ordersDateTo) params.set('date_to', state.ordersDateTo);
+    if (state.clientKey) params.set('client_key', state.clientKey);
+    if (state.clientName) params.set('client_name', state.clientName);
+    if (state.clientPhone) params.set('client_phone', state.clientPhone);
+
     const data = await api(`/api/orders?${params}`);
     state.orders = data.items;
     state.total = data.total;
@@ -107,7 +154,8 @@ async function loadOrders() {
 
 function renderStatusCounts(counts) {
     const all = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
-    document.querySelector('[data-count="all"]').textContent = all;
+    const allNode = document.querySelector('[data-count="all"]');
+    if (allNode) allNode.textContent = all;
     for (const status of Object.keys(statusLabels)) {
         const node = document.querySelector(`[data-count="${status}"]`);
         if (node) node.textContent = counts[status] || 0;
@@ -117,20 +165,35 @@ function renderStatusCounts(counts) {
 function renderOrders() {
     elements.ordersGrid.replaceChildren();
     elements.ordersCount.textContent = `${state.total} orders`;
+    renderActiveClientFilter();
+
     if (!state.orders.length) {
         const empty = document.createElement('article');
         empty.className = 'empty-state';
         empty.textContent = 'No repair orders found.';
         elements.ordersGrid.append(empty);
     }
+
     for (const order of state.orders) {
         elements.ordersGrid.append(orderCard(order));
     }
+
     const first = state.total ? state.offset + 1 : 0;
     const last = Math.min(state.offset + state.limit, state.total);
     elements.ordersPaginationLabel.textContent = `${first}-${last} of ${state.total}`;
     elements.ordersPrev.disabled = state.offset === 0;
     elements.ordersNext.disabled = state.offset + state.limit >= state.total;
+}
+
+function renderActiveClientFilter() {
+    if (!state.clientKey) {
+        elements.activeClientFilter.hidden = true;
+        return;
+    }
+    const label = state.clientName || state.clientPhone || 'Selected client';
+    const phone = state.clientPhone ? ` · ${state.clientPhone}` : '';
+    elements.activeClientFilterText.textContent = `Orders for ${label}${phone}`;
+    elements.activeClientFilter.hidden = false;
 }
 
 function orderCard(order) {
@@ -140,6 +203,7 @@ function orderCard(order) {
 
     const head = document.createElement('div');
     head.className = 'order-head';
+
     const clientPhoto = document.createElement('button');
     clientPhoto.className = 'client-photo';
     clientPhoto.type = 'button';
@@ -171,43 +235,50 @@ function orderCard(order) {
     );
     title.append(id, name, meta);
 
+    const statusActions = document.createElement('div');
+    statusActions.className = 'status-actions';
     const select = document.createElement('select');
     select.className = 'status-select';
-    for (const [value, label] of Object.entries(statusLabels)) {
+    for (const value of statusOptions) {
         const option = document.createElement('option');
         option.value = value;
-        option.textContent = label;
+        option.textContent = statusLabels[value];
         option.selected = value === order.orderStatus;
         select.append(option);
     }
     select.addEventListener('change', () => changeStatus(order, select, card));
-    head.append(clientPhoto, title, select);
+    statusActions.append(select);
+    if (order.orderStatus === 'Ready') {
+        const pickup = document.createElement('button');
+        pickup.className = 'button pickup-button';
+        pickup.type = 'button';
+        pickup.textContent = 'Picked Up';
+        pickup.addEventListener('click', () => markPickedUp(order));
+        statusActions.append(pickup);
+    }
+    head.append(clientPhoto, title, statusActions);
 
     const body = document.createElement('div');
     body.className = 'order-body';
     const work = document.createElement('p');
     work.className = 'work-line';
-    const templates = order.workTemplates || [];
-    const itemType = templates[0] || '';
-    const templateText = templates.join(', ');
-    const description = order.workDescription || '';
-    const manualDescription = description.startsWith(templateText)
-        ? description.slice(templateText.length).replace(/^:\s*/, '').trim()
-        : description;
+    const itemType = order.itemType || firstItemType(order.workTemplates || []);
+    const services = order.serviceNames || serviceNames(order.workTemplates || []);
     if (itemType) {
-        const strong = document.createElement('span');
+        const strong = document.createElement('strong');
         strong.className = 'item-type';
         strong.textContent = itemType;
-        work.append(strong, document.createTextNode(templates.length > 1 ? ` · ${templates.slice(1).join(', ')}` : ''));
-        if (manualDescription) work.append(document.createTextNode(` — ${manualDescription}`));
+        work.append(strong);
+        if (services.length) work.append(document.createTextNode(` | ${services.join(', ')}`));
     } else {
-        work.textContent = description || 'Repair order';
+        work.textContent = order.workDescription || 'Repair order';
     }
 
+    const notes = order.manualWorkNotes || manualWorkNotes(order.workDescription || '', order.workTemplates || []);
     const moneyRow = document.createElement('div');
     moneyRow.className = 'money-row';
     moneyRow.append(
-        moneyChip('Total', order.totalPriceCents),
+        moneyChip('Price', order.totalPriceCents),
         moneyChip('Deposit', order.depositPaidCents),
         moneyChip('Due', order.balanceDueCents, 'due'),
     );
@@ -226,16 +297,34 @@ function orderCard(order) {
         photos.append(thumb);
     }
 
-    const links = document.createElement('div');
-    links.className = 'file-links';
-    addFileLink(links, order.signatureUrl, 'Signature');
-    addFileLink(links, order.labelPdfUrl, 'Label PDF');
-    addFileLink(links, order.labelPngUrl, 'Label PNG');
-
-    body.append(work, moneyRow);
+    body.append(work);
+    if (notes) {
+        const notesLine = document.createElement('p');
+        notesLine.className = 'service-notes';
+        notesLine.textContent = notes;
+        body.append(notesLine);
+    }
+    body.append(moneyRow);
     if (photos.childElementCount) body.append(photos);
-    if (links.childElementCount) body.append(links);
-    card.append(head, body);
+
+    const footer = document.createElement('div');
+    footer.className = 'order-footer';
+    const sync = document.createElement('span');
+    sync.className = `sync-chip ${order.syncState === 'Synced' ? 'synced' : 'pending'}`;
+    sync.textContent = order.syncState || 'Synced';
+    const footerActions = document.createElement('div');
+    footerActions.className = 'card-actions';
+    addFileLink(footerActions, order.signatureUrl, 'Signature');
+    addPrintLink(footerActions, order.labelPdfUrl || order.labelPngUrl);
+    const remove = document.createElement('button');
+    remove.className = 'link-button danger';
+    remove.type = 'button';
+    remove.textContent = 'Delete';
+    remove.addEventListener('click', () => deleteOrder(order));
+    footerActions.append(remove);
+    footer.append(sync, footerActions);
+
+    card.append(head, body, footer);
     return card;
 }
 
@@ -249,10 +338,29 @@ function initials(name) {
     return (name || 'C').trim().slice(0, 1).toUpperCase();
 }
 
+function firstItemType(templates) {
+    const item = templates.find(value => value.startsWith('Item:'));
+    return item ? item.replace(/^Item:\s*/, '') : (templates[0] || '');
+}
+
+function serviceNames(templates) {
+    return templates.filter(value => value && !value.startsWith('Item:'));
+}
+
+function manualWorkNotes(description, templates) {
+    const prefix = templates.join(', ');
+    if (!prefix || !description.startsWith(prefix)) return '';
+    return description.slice(prefix.length).replace(/^:\s*/, '').trim();
+}
+
 function moneyChip(label, value, extra = '') {
     const chip = document.createElement('span');
     chip.className = `money-chip ${extra}`;
-    chip.innerHTML = `${label}: <strong>${cents(value)}</strong>`;
+    const labelNode = document.createElement('span');
+    labelNode.textContent = `${label}: `;
+    const valueNode = document.createElement('strong');
+    valueNode.textContent = cents(value);
+    chip.append(labelNode, valueNode);
     return chip;
 }
 
@@ -266,24 +374,176 @@ function addFileLink(container, url, label) {
     container.append(link);
 }
 
+function addPrintLink(container, url) {
+    const link = document.createElement('a');
+    link.className = `button secondary small${url ? '' : ' disabled'}`;
+    link.textContent = 'Print';
+    if (url) {
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+    } else {
+        link.setAttribute('aria-disabled', 'true');
+    }
+    container.append(link);
+}
+
 async function changeStatus(order, select, card) {
     const previous = order.orderStatus;
+    let settleBalance = false;
+    if (select.value === 'PickedUp' && Number(order.balanceDueCents || 0) > 0) {
+        settleBalance = window.confirm('Release and close balance?');
+        if (!settleBalance) {
+            select.value = previous;
+            return;
+        }
+    }
+
     select.disabled = true;
     try {
-        const updated = await api(`/api/orders/${encodeURIComponent(order.id)}/status`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json', 'X-Requested-With': 'CrownRepairs'},
-            body: JSON.stringify({status: select.value}),
-        });
+        const updated = await updateOrderStatus(order, select.value, settleBalance);
         Object.assign(order, updated);
         card.dataset.status = order.orderStatus;
         showToast(`Updated ${order.orderId} to ${statusLabels[order.orderStatus]}`);
-        await Promise.all([loadOrders(), loadFinance()]);
+        await reloadAfterMutation();
     } catch (error) {
         select.value = previous;
         showToast(error.message, true);
     } finally {
         select.disabled = false;
+    }
+}
+
+async function markPickedUp(order) {
+    let settleBalance = false;
+    if (Number(order.balanceDueCents || 0) > 0) {
+        settleBalance = window.confirm('Release and close balance?');
+        if (!settleBalance) return;
+    }
+    try {
+        await updateOrderStatus(order, 'PickedUp', settleBalance);
+        showToast(`Updated ${order.orderId} to Picked Up`);
+        await reloadAfterMutation();
+    } catch (error) {
+        showToast(error.message, true);
+    }
+}
+
+function updateOrderStatus(order, status, settleBalance = false) {
+    return api(`/api/orders/${encodeURIComponent(order.id)}/status`, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'CrownRepairs'},
+        body: JSON.stringify({status, settleBalance}),
+    });
+}
+
+async function deleteOrder(order) {
+    const confirmed = window.confirm(`Delete order ${order.orderId} from Firestore?`);
+    if (!confirmed) return;
+    try {
+        await api(`/api/orders/${encodeURIComponent(order.id)}`, {
+            method: 'DELETE',
+            headers: {'X-Requested-With': 'CrownRepairs'},
+        });
+        showToast(`Deleted ${order.orderId}`);
+        await reloadAfterMutation();
+    } catch (error) {
+        showToast(error.message, true);
+    }
+}
+
+async function reloadAfterMutation() {
+    await Promise.all([loadOrders(), loadFinance(), loadClients()]);
+}
+
+async function loadClients() {
+    const params = new URLSearchParams({
+        limit: state.clientsLimit,
+        offset: state.clientsOffset,
+        sort: state.clientsSort,
+    });
+    if (state.clientsQuery) params.set('q', state.clientsQuery);
+    const data = await api(`/api/clients?${params}`);
+    state.clients = data.items;
+    state.clientsTotal = data.total;
+    renderClients();
+    setConnectionState(true);
+}
+
+function renderClients() {
+    elements.clientsGrid.replaceChildren();
+    elements.clientsCount.textContent = `${state.clientsTotal} clients`;
+    if (!state.clients.length) {
+        const empty = document.createElement('article');
+        empty.className = 'empty-state';
+        empty.textContent = 'No clients found.';
+        elements.clientsGrid.append(empty);
+    }
+    for (const client of state.clients) {
+        elements.clientsGrid.append(clientCard(client));
+    }
+    const first = state.clientsTotal ? state.clientsOffset + 1 : 0;
+    const last = Math.min(state.clientsOffset + state.clientsLimit, state.clientsTotal);
+    elements.clientsPaginationLabel.textContent = `${first}-${last} of ${state.clientsTotal}`;
+    elements.clientsPrev.disabled = state.clientsOffset === 0;
+    elements.clientsNext.disabled = state.clientsOffset + state.clientsLimit >= state.clientsTotal;
+}
+
+function clientCard(client) {
+    const card = document.createElement('button');
+    card.className = 'client-card';
+    card.type = 'button';
+    card.addEventListener('click', () => openClientOrders(client));
+
+    const photo = document.createElement('span');
+    photo.className = 'client-list-photo';
+    if (client.latestClientPhotoUrl) {
+        const image = document.createElement('img');
+        image.src = client.latestClientPhotoUrl;
+        image.alt = '';
+        photo.append(image);
+    } else {
+        photo.textContent = initials(client.name);
+    }
+
+    const body = document.createElement('span');
+    body.className = 'client-card-body';
+    const name = document.createElement('strong');
+    name.textContent = client.name || 'No customer name';
+    const meta = document.createElement('span');
+    meta.className = 'client-meta';
+    meta.textContent = [client.phone || 'No phone', client.address || 'No address'].join(' · ');
+    const chips = document.createElement('span');
+    chips.className = 'client-chips';
+    chips.append(
+        clientChip(`${client.orderCount || 0} orders`, 'orders'),
+        clientChip(`Due ${cents(client.dueCents)}`, Number(client.dueCents || 0) > 0 ? 'due' : ''),
+        clientChip(client.lastOrderAt ? `Last ${displayDateTime(client.lastOrderAt)}` : 'No recent order', ''),
+    );
+    body.append(name, meta, chips);
+
+    card.append(photo, body);
+    return card;
+}
+
+function clientChip(text, extra) {
+    const chip = document.createElement('span');
+    chip.className = `client-chip ${extra}`;
+    chip.textContent = text;
+    return chip;
+}
+
+async function openClientOrders(client) {
+    state.clientKey = client.key || '';
+    state.clientName = client.name || '';
+    state.clientPhone = client.phone || '';
+    state.offset = 0;
+    switchView('orders');
+    try {
+        await loadOrders();
+    } catch (error) {
+        setConnectionState(false);
+        showToast(error.message, true);
     }
 }
 
@@ -435,23 +695,47 @@ function switchView(view) {
     document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
     document.getElementById(`${view}-view`).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === view));
-    elements.pageTitle.textContent = view === 'orders' ? 'Orders' : 'Finances';
+    elements.pageTitle.textContent = {orders: 'Orders', clients: 'Clients', finances: 'Finances'}[view] || 'Orders';
 }
 
-let searchTimer;
-elements.ordersSearch.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(async () => {
-        state.query = elements.ordersSearch.value.trim();
-        state.offset = 0;
+function setStatusFilter(status) {
+    state.status = status;
+    document.querySelectorAll('.status-card').forEach(item => item.classList.toggle('active', item.dataset.status === status));
+}
+
+function setOrdersPeriod(period) {
+    state.ordersPeriod = state.ordersPeriod === period ? '' : period;
+    state.ordersDateFrom = '';
+    state.ordersDateTo = '';
+    elements.ordersDateFrom.value = '';
+    elements.ordersDateTo.value = '';
+    document.querySelectorAll('.date-filter-tab').forEach(item => item.classList.toggle('active', item.dataset.period === state.ordersPeriod));
+}
+
+function applyOrderInputState() {
+    state.nameQuery = elements.ordersNameSearch.value.trim();
+    state.phoneQuery = elements.ordersPhoneSearch.value.trim();
+    state.codeQuery = elements.ordersCodeSearch.value.trim();
+    state.offset = 0;
+}
+
+let ordersSearchTimer;
+function scheduleOrdersSearch() {
+    clearTimeout(ordersSearchTimer);
+    ordersSearchTimer = setTimeout(async () => {
+        applyOrderInputState();
         try {
             await loadOrders();
         } catch (error) {
             setConnectionState(false);
             showToast(error.message, true);
         }
-    }, 250);
-});
+    }, 220);
+}
+
+for (const input of [elements.ordersNameSearch, elements.ordersPhoneSearch, elements.ordersCodeSearch]) {
+    input.addEventListener('input', scheduleOrdersSearch);
+}
 
 document.querySelectorAll('.nav-item').forEach(button => {
     button.addEventListener('click', () => switchView(button.dataset.view));
@@ -459,8 +743,20 @@ document.querySelectorAll('.nav-item').forEach(button => {
 
 document.querySelectorAll('.status-card').forEach(button => {
     button.addEventListener('click', async () => {
-        document.querySelectorAll('.status-card').forEach(item => item.classList.toggle('active', item === button));
-        state.status = button.dataset.status;
+        setStatusFilter(button.dataset.status);
+        state.offset = 0;
+        try {
+            await loadOrders();
+        } catch (error) {
+            setConnectionState(false);
+            showToast(error.message, true);
+        }
+    });
+});
+
+document.querySelectorAll('.date-filter-tab').forEach(button => {
+    button.addEventListener('click', async () => {
+        setOrdersPeriod(button.dataset.period);
         state.offset = 0;
         try {
             await loadOrders();
@@ -477,10 +773,11 @@ elements.ordersFilterForm.addEventListener('submit', async event => {
         showToast('Start date cannot be after end date', true);
         return;
     }
+    applyOrderInputState();
     state.ordersDateFrom = elements.ordersDateFrom.value;
     state.ordersDateTo = elements.ordersDateTo.value;
-    state.query = elements.ordersSearch.value.trim();
-    state.offset = 0;
+    state.ordersPeriod = '';
+    document.querySelectorAll('.date-filter-tab').forEach(item => item.classList.remove('active'));
     try {
         await loadOrders();
     } catch (error) {
@@ -491,15 +788,47 @@ elements.ordersFilterForm.addEventListener('submit', async event => {
 
 elements.ordersReset.addEventListener('click', async () => {
     elements.ordersFilterForm.reset();
-    state.query = '';
+    state.nameQuery = '';
+    state.phoneQuery = '';
+    state.codeQuery = '';
     state.ordersDateFrom = '';
     state.ordersDateTo = '';
+    state.ordersPeriod = '';
+    state.clientKey = '';
+    state.clientName = '';
+    state.clientPhone = '';
     state.offset = 0;
+    setStatusFilter('');
+    document.querySelectorAll('.date-filter-tab').forEach(item => item.classList.remove('active'));
     try {
         await loadOrders();
     } catch (error) {
         showToast(error.message, true);
     }
+});
+
+elements.ordersCodeClear.addEventListener('click', async () => {
+    elements.ordersCodeSearch.value = '';
+    state.codeQuery = '';
+    state.offset = 0;
+    await loadOrders().catch(error => showToast(error.message, true));
+});
+
+elements.ordersScan.addEventListener('click', async () => {
+    const value = window.prompt('Scan or enter order code');
+    if (value === null) return;
+    elements.ordersCodeSearch.value = value.trim();
+    state.codeQuery = value.trim();
+    state.offset = 0;
+    await loadOrders().catch(error => showToast(error.message, true));
+});
+
+elements.clearClientFilter.addEventListener('click', async () => {
+    state.clientKey = '';
+    state.clientName = '';
+    state.clientPhone = '';
+    state.offset = 0;
+    await loadOrders().catch(error => showToast(error.message, true));
 });
 
 elements.ordersPrev.addEventListener('click', async () => {
@@ -510,6 +839,53 @@ elements.ordersPrev.addEventListener('click', async () => {
 elements.ordersNext.addEventListener('click', async () => {
     state.offset += state.limit;
     await loadOrders().catch(error => showToast(error.message, true));
+});
+
+let clientsSearchTimer;
+elements.clientsSearch.addEventListener('input', () => {
+    clearTimeout(clientsSearchTimer);
+    clientsSearchTimer = setTimeout(async () => {
+        state.clientsQuery = elements.clientsSearch.value.trim();
+        state.clientsOffset = 0;
+        try {
+            await loadClients();
+        } catch (error) {
+            setConnectionState(false);
+            showToast(error.message, true);
+        }
+    }, 220);
+});
+
+elements.clientsFilterForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    state.clientsQuery = elements.clientsSearch.value.trim();
+    state.clientsSort = elements.clientsSort.value;
+    state.clientsOffset = 0;
+    await loadClients().catch(error => showToast(error.message, true));
+});
+
+elements.clientsSort.addEventListener('change', async () => {
+    state.clientsSort = elements.clientsSort.value;
+    state.clientsOffset = 0;
+    await loadClients().catch(error => showToast(error.message, true));
+});
+
+elements.clientsReset.addEventListener('click', async () => {
+    elements.clientsFilterForm.reset();
+    state.clientsQuery = '';
+    state.clientsSort = 'recent';
+    state.clientsOffset = 0;
+    await loadClients().catch(error => showToast(error.message, true));
+});
+
+elements.clientsPrev.addEventListener('click', async () => {
+    state.clientsOffset = Math.max(0, state.clientsOffset - state.clientsLimit);
+    await loadClients().catch(error => showToast(error.message, true));
+});
+
+elements.clientsNext.addEventListener('click', async () => {
+    state.clientsOffset += state.clientsLimit;
+    await loadClients().catch(error => showToast(error.message, true));
 });
 
 document.querySelectorAll('.period-tab').forEach(button => {
@@ -567,7 +943,7 @@ elements.financeReset.addEventListener('click', async () => {
 elements.refreshButton.addEventListener('click', async () => {
     elements.refreshButton.disabled = true;
     try {
-        await Promise.all([loadOrders(), loadFinance()]);
+        await Promise.all([loadOrders(), loadFinance(), loadClients()]);
         showToast('Data refreshed');
     } catch (error) {
         setConnectionState(false);
@@ -582,7 +958,7 @@ elements.photoDialog.addEventListener('click', event => {
     if (event.target === elements.photoDialog) closePhoto();
 });
 
-Promise.all([loadOrders(), loadFinance()]).catch(error => {
+Promise.all([loadOrders(), loadFinance(), loadClients()]).catch(error => {
     setConnectionState(false);
     showToast(error.message || 'Could not load data', true);
 });

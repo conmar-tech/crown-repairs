@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-OrderStatus = Literal["New", "InWork", "Ready", "PickedUp"]
+OrderStatus = Literal["New", "InWork", "AtJeweler", "Ready", "PickedUp"]
 
 
 class GoogleCredential(BaseModel):
@@ -15,3 +15,4 @@ class GoogleCredential(BaseModel):
 
 class StatusPayload(BaseModel):
     status: OrderStatus
+    settleBalance: bool = False

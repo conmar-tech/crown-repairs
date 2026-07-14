@@ -136,6 +136,13 @@ async def current_user(request: Request):
 async def list_orders(
     status: str | None = Query(default=None),
     q: str = "",
+    name: str = "",
+    phone: str = "",
+    code: str = "",
+    period: str = Query(default="", pattern="^(|today|week|month)$"),
+    client_key: str = "",
+    client_name: str = "",
+    client_phone: str = "",
     date_from: date | None = None,
     date_to: date | None = None,
     limit: int = Query(default=50, ge=1, le=200),
@@ -149,6 +156,13 @@ async def list_orders(
         return repository.list_orders(
             status=status,
             query=q,
+            name=name,
+            phone=phone,
+            code=code,
+            period=period,
+            client_key=client_key,
+            client_name=client_name,
+            client_phone=client_phone,
             date_from=date_from,
             date_to=date_to,
             limit=limit,
@@ -166,12 +180,38 @@ async def update_order_status(request: Request, order_id: str, payload: StatusPa
             order_id=order_id,
             status=payload.status,
             user_email=str(getattr(request.state, "user_email", "")),
+            settle_balance=payload.settleBalance,
         )
     except RepairsRepositoryError as exc:
         raise _repo_error(exc) from exc
     if not updated:
         raise HTTPException(status_code=404, detail="Order not found")
     return updated
+
+
+@app.delete("/api/orders/{order_id}")
+async def delete_order(request: Request, order_id: str):
+    _require_same_origin_action(request)
+    try:
+        deleted = repository.delete_order(order_id)
+    except RepairsRepositoryError as exc:
+        raise _repo_error(exc) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"success": True, "orderId": order_id}
+
+
+@app.get("/api/clients")
+async def list_clients(
+    q: str = "",
+    sort: str = Query(default="recent", pattern="^(recent|name|orders)$"),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+):
+    try:
+        return repository.list_clients(query=q, sort=sort, limit=limit, offset=offset)
+    except RepairsRepositoryError as exc:
+        raise _repo_error(exc) from exc
 
 
 @app.get("/api/finance")

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
     <title>Repairs · Crown Jewelry</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260712-1">
-    <script src="{{ url_for('static', path='/app.js') }}?v=20260712-1" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260714-1">
+    <script src="{{ url_for('static', path='/app.js') }}?v=20260714-1" defer></script>
 </head>
 <body>
     <div class="app-shell">
@@ -18,6 +18,9 @@
             <nav class="main-nav" aria-label="Main navigation">
                 <button class="nav-item active" type="button" data-view="orders">
                     <span class="nav-icon">▤</span><span>Orders</span>
+                </button>
+                <button class="nav-item" type="button" data-view="clients">
+                    <span class="nav-icon">◉</span><span>Clients</span>
                 </button>
                 <button class="nav-item" type="button" data-view="finances">
                     <span class="nav-icon">$</span><span>Finances</span>
@@ -47,6 +50,11 @@
                         <span class="panel-kicker">Repair ledger</span>
                         <h2 id="orders-title">Orders</h2>
                     </div>
+                    <div class="date-filter-tabs" id="orders-period-tabs" role="group" aria-label="Order date period">
+                        <button class="date-filter-tab" type="button" data-period="today">Today</button>
+                        <button class="date-filter-tab" type="button" data-period="week">Week</button>
+                        <button class="date-filter-tab" type="button" data-period="month">Month</button>
+                    </div>
                     <span class="record-count" id="orders-count">— orders</span>
                 </div>
 
@@ -54,11 +62,11 @@
                     <button class="status-card status-new active" type="button" data-status="">
                         <span>All</span><strong data-count="all">0</strong>
                     </button>
-                    <button class="status-card status-new" type="button" data-status="New">
-                        <span>New</span><strong data-count="New">0</strong>
+                    <button class="status-card status-jeweler" type="button" data-status="AtJeweler">
+                        <span>At Jeweler</span><strong data-count="AtJeweler">0</strong>
                     </button>
                     <button class="status-card status-work" type="button" data-status="InWork">
-                        <span>In work</span><strong data-count="InWork">0</strong>
+                        <span>In Work</span><strong data-count="InWork">0</strong>
                     </button>
                     <button class="status-card status-ready" type="button" data-status="Ready">
                         <span>Ready</span><strong data-count="Ready">0</strong>
@@ -69,10 +77,20 @@
                 </div>
 
                 <form class="filters-bar" id="orders-filter-form">
-                    <label class="search-field">
-                        <span>Search</span>
-                        <input id="orders-search" type="search" placeholder="Name, phone, order ID">
+                    <label class="search-field compact">
+                        <span>Name</span>
+                        <input id="orders-name-search" type="search" placeholder="Customer name">
                     </label>
+                    <label class="search-field compact">
+                        <span>Phone</span>
+                        <input id="orders-phone-search" type="search" placeholder="Phone">
+                    </label>
+                    <button class="clear-code-button" id="orders-code-clear" type="button" aria-label="Clear order code">×</button>
+                    <label class="search-field code-field">
+                        <span>Order ID or barcode</span>
+                        <input id="orders-code-search" type="search" placeholder="Code, date, last 4 digits">
+                    </label>
+                    <button class="button secondary" id="orders-scan" type="button">Scan</button>
                     <label>
                         <span>From</span>
                         <input id="orders-date-from" type="date">
@@ -84,6 +102,10 @@
                     <button class="button primary" type="submit">Apply</button>
                     <button class="button secondary" id="orders-reset" type="button">Reset</button>
                 </form>
+                <div class="active-client-filter" id="active-client-filter" hidden>
+                    <span id="active-client-filter-text"></span>
+                    <button class="link-button danger" id="clear-client-filter" type="button">Clear</button>
+                </div>
 
                 <div class="orders-grid" id="orders-grid" aria-live="polite">
                     <article class="loading-card">Loading orders…</article>
@@ -93,6 +115,44 @@
                     <div class="pagination-actions">
                         <button class="icon-button" id="orders-prev" type="button" aria-label="Previous page">←</button>
                         <button class="icon-button" id="orders-next" type="button" aria-label="Next page">→</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="clients-view" class="content-section" aria-labelledby="clients-title">
+                <div class="section-heading">
+                    <div>
+                        <span class="panel-kicker">Customer list</span>
+                        <h2 id="clients-title">Clients</h2>
+                    </div>
+                    <span class="record-count" id="clients-count">— clients</span>
+                </div>
+
+                <form class="filters-bar clients-filters" id="clients-filter-form">
+                    <label class="search-field">
+                        <span>Search</span>
+                        <input id="clients-search" type="search" placeholder="Name or phone">
+                    </label>
+                    <label>
+                        <span>Sort</span>
+                        <select id="clients-sort">
+                            <option value="recent">Recent order</option>
+                            <option value="name">Name</option>
+                            <option value="orders">Order count</option>
+                        </select>
+                    </label>
+                    <button class="button primary" type="submit">Apply</button>
+                    <button class="button secondary" id="clients-reset" type="button">Reset</button>
+                </form>
+
+                <div class="clients-grid" id="clients-grid" aria-live="polite">
+                    <article class="loading-card">Loading clients…</article>
+                </div>
+                <div class="pagination-bar">
+                    <span id="clients-pagination-label">—</span>
+                    <div class="pagination-actions">
+                        <button class="icon-button" id="clients-prev" type="button" aria-label="Previous clients page">←</button>
+                        <button class="icon-button" id="clients-next" type="button" aria-label="Next clients page">→</button>
                     </div>
                 </div>
             </section>

@@ -29,11 +29,12 @@ Expected fields:
 ```text
 orderId: string
 customer: {
+  clientId?: string
   name: string
   phone: string
   address: string
 }
-orderStatus: "New" | "InWork" | "Ready" | "PickedUp"
+orderStatus: "New" | "InWork" | "AtJeweler" | "Ready" | "PickedUp"
 workDescription: string
 workTemplates: string[]
 payment: {
@@ -57,6 +58,14 @@ files: {
 }
 ```
 
+Client collection:
+
+```text
+clients/{clientId}
+```
+
+The web panel reads this collection to build the Clients tab, then merges order-derived counts and totals into each client card. Orders without a matching client document are grouped by phone number.
+
 ## Status Update Flow
 
 When staff changes a status in the web panel, the server updates the Firestore document directly:
@@ -71,6 +80,13 @@ lastModifiedDeviceId = "web-admin"
 source.lastModifiedDeviceId = "web-admin"
 ```
 
+When the web panel marks an order as `PickedUp` with `settleBalance=true`, it also writes:
+
+```text
+payment.depositPaidCents = payment.totalPriceCents
+payment.balanceDueCents = 0
+```
+
 The tablet app watches/pulls these fields. Because `lastModifiedDeviceId` differs from the tablet's generated `deviceId`, the tablet treats the document as a cloud-origin update and merges it into Room.
 
 ## Orders Screen
@@ -78,27 +94,39 @@ The tablet app watches/pulls these fields. Because `lastModifiedDeviceId` differ
 The Orders screen provides:
 
 - status count cards for all workflow states;
-- search by customer name, phone, address, order id, service, or description;
-- date range filtering;
+- status filters for `AtJeweler`, `InWork`, `Ready`, and `PickedUp`;
+- separate filters for customer name, phone, order id/barcode, date range, and quick date periods `Today`, `Week`, and `Month`;
 - paginated cards;
 - client photo in the top-left of each card;
 - jewelry photos as thumbnails in the bottom row;
 - signature and label links when available;
-- inline status change.
+- inline status change;
+- `Picked Up` shortcut on Ready cards;
+- Firestore document deletion after browser confirmation.
 
 Status backgrounds:
 
 - `New`: light beige.
 - `InWork`: light red/pink.
+- `AtJeweler`: warm amber.
 - `Ready`: light green.
 - `PickedUp`: normal white archival background.
+
+## Clients Screen
+
+The Clients screen reads `clients` and `repairOrders`, then shows:
+
+- search by name or phone;
+- sorting by recent order, name, or order count;
+- total order count, due amount, and last order date per client;
+- click-through to Orders with that client preselected as an active filter.
 
 ## Finances Screen
 
 The Finances screen computes from repair orders:
 
 - total value of orders in the period;
-- open value for `New + InWork + Ready`;
+- open value for `New + InWork + AtJeweler + Ready`;
 - ready value not yet picked up;
 - due balance for open orders;
 - deposits collected;
