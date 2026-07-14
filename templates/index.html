@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
     <title>Repairs · Crown Jewelry</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260714-7">
-    <script src="{{ url_for('static', path='/app.js') }}?v=20260714-7" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260714-8">
+    <script src="{{ url_for('static', path='/app.js') }}?v=20260714-8" defer></script>
 </head>
 <body>
     <div class="app-shell">
         <aside class="sidebar">
             <a class="brand" href="/" aria-label="Crown Jewelry">
                 <img class="sidebar-logo" src="{{ url_for('static', path='/crown-gold-transparent.png') }}" alt="Crown Jewelry">
-                <span class="brand-name">Crown Jewelry</span>
+                <span class="brand-copy">
+                    <span class="brand-name">Crown Jewelry</span>
+                    <span class="brand-subtitle">Repair</span>
+                </span>
             </a>
             <nav class="main-nav" aria-label="Main navigation">
                 <button class="nav-item active" type="button" data-view="orders">
