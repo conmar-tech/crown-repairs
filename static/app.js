@@ -754,8 +754,30 @@ function scheduleOrdersSearch() {
     }, 220);
 }
 
+async function applyOrdersDateFilter() {
+    if (elements.ordersDateFrom.value && elements.ordersDateTo.value && elements.ordersDateFrom.value > elements.ordersDateTo.value) {
+        showToast('Start date cannot be after end date', true);
+        return;
+    }
+    applyOrderInputState();
+    state.ordersDateFrom = elements.ordersDateFrom.value;
+    state.ordersDateTo = elements.ordersDateTo.value;
+    state.ordersPeriod = '';
+    document.querySelectorAll('.date-filter-tab').forEach(item => item.classList.remove('active'));
+    try {
+        await loadOrders();
+    } catch (error) {
+        setConnectionState(false);
+        showToast(error.message, true);
+    }
+}
+
 for (const input of [elements.ordersNameSearch, elements.ordersPhoneSearch, elements.ordersCodeSearch]) {
     input.addEventListener('input', scheduleOrdersSearch);
+}
+
+for (const input of [elements.ordersDateFrom, elements.ordersDateTo]) {
+    input.addEventListener('change', applyOrdersDateFilter);
 }
 
 document.querySelectorAll('.nav-item').forEach(button => {
@@ -790,21 +812,7 @@ document.querySelectorAll('.date-filter-tab').forEach(button => {
 
 elements.ordersFilterForm.addEventListener('submit', async event => {
     event.preventDefault();
-    if (elements.ordersDateFrom.value && elements.ordersDateTo.value && elements.ordersDateFrom.value > elements.ordersDateTo.value) {
-        showToast('Start date cannot be after end date', true);
-        return;
-    }
-    applyOrderInputState();
-    state.ordersDateFrom = elements.ordersDateFrom.value;
-    state.ordersDateTo = elements.ordersDateTo.value;
-    state.ordersPeriod = '';
-    document.querySelectorAll('.date-filter-tab').forEach(item => item.classList.remove('active'));
-    try {
-        await loadOrders();
-    } catch (error) {
-        setConnectionState(false);
-        showToast(error.message, true);
-    }
+    await applyOrdersDateFilter();
 });
 
 elements.ordersReset.addEventListener('click', async () => {

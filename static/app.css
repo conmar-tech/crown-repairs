@@ -96,6 +96,12 @@ button { color: inherit; }
 .record-count { padding: 8px 12px; border-radius: 999px; color: var(--muted); background: white; border: 1px solid var(--line); font-size: 11px; font-weight: 750; }
 .title-with-count { display: flex; align-items: center; gap: 12px; }
 .inline-count { flex: 0 0 auto; }
+.orders-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+}
+.orders-heading .date-filter-tabs { grid-column: 2; }
 .clients-heading { align-items: center; min-height: 42px; }
 .date-filter-tabs {
     align-self: center; justify-self: center; min-height: 42px; padding: 4px; border: 1px solid var(--line); border-radius: 14px;
@@ -328,6 +334,7 @@ button { color: inherit; }
     .sync-status { display: none; }
     .content-section { padding: 24px 16px 88px; }
     .section-heading { align-items: flex-start; flex-direction: column; padding-right: 0; }
+    .orders-heading { display: flex; }
     .clients-heading { min-height: 0; }
     .date-filter-tabs { width: 100%; justify-content: center; }
     .date-filter-tab { flex: 1 1 0; min-width: 0; }
