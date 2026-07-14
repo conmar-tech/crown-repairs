@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
     <title>Repairs · Crown Jewelry</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260714-1">
-    <script src="{{ url_for('static', path='/app.js') }}?v=20260714-1" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}?v=20260714-2">
+    <script src="{{ url_for('static', path='/app.js') }}?v=20260714-2" defer></script>
 </head>
 <body>
     <div class="app-shell">
@@ -120,12 +120,11 @@
             </section>
 
             <section id="clients-view" class="content-section" aria-labelledby="clients-title">
-                <div class="section-heading">
-                    <div>
-                        <span class="panel-kicker">Customer list</span>
+                <div class="section-heading clients-heading">
+                    <div class="title-with-count">
                         <h2 id="clients-title">Clients</h2>
+                        <span class="record-count inline-count" id="clients-count">— clients</span>
                     </div>
-                    <span class="record-count" id="clients-count">— clients</span>
                 </div>
 
                 <form class="filters-bar clients-filters" id="clients-filter-form">
