@@ -188,6 +188,10 @@ button { color: inherit; }
 .order-body { display: grid; gap: 10px; }
 .work-line { margin: 0; color: #334052; font-size: 13px; line-height: 1.45; }
 .item-type { font-weight: 800; }
+.item-details-line {
+    margin: -3px 0 0; padding: 7px 9px; border: 1px solid rgba(179,138,74,.22); border-radius: 9px;
+    color: #415047; background: rgba(237,248,242,.72); font-size: 11px; font-weight: 780; line-height: 1.35;
+}
 .service-notes { margin: -3px 0 0; color: #5e6875; font-size: 12px; line-height: 1.45; }
 .money-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .money-chip { padding: 7px 9px; border-radius: 9px; color: #495361; background: rgba(255,255,255,.58); font-size: 11px; font-weight: 820; }

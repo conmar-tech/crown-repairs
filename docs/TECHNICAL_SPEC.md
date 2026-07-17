@@ -37,6 +37,12 @@ customer: {
 orderStatus: "New" | "InWork" | "AtJeweler" | "Ready" | "PickedUp"
 workDescription: string
 workTemplates: string[]
+itemDetails: {
+  material?: string
+  carat?: string
+  size?: string
+  length?: string
+}
 payment: {
   totalPriceCents: number
   depositPaidCents: number
@@ -65,6 +71,8 @@ clients/{clientId}
 ```
 
 The web panel reads this collection to build the Clients tab, then merges order-derived counts and totals into each client card. Orders without a matching client document are grouped by phone number.
+
+Order cards display the selected item type, services, optional service description, and the `itemDetails` values for material, carat, ring size, or chain/bracelet length when those values are present.
 
 ## Status Update Flow
 

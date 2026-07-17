@@ -309,6 +309,7 @@ class FirestoreOrderRepository:
     def _decode(self, snapshot) -> dict:
         data = snapshot.to_dict() or {}
         customer = data.get("customer") if isinstance(data.get("customer"), dict) else {}
+        item_details = data.get("itemDetails") if isinstance(data.get("itemDetails"), dict) else {}
         payment = data.get("payment") if isinstance(data.get("payment"), dict) else {}
         files = data.get("files") if isinstance(data.get("files"), dict) else {}
         created_at = self._timestamp_string(data.get("createdAt"))
@@ -331,6 +332,12 @@ class FirestoreOrderRepository:
             "customerPhone": str(customer.get("phone") or ""),
             "customerAddress": str(customer.get("address") or ""),
             "orderStatus": status,
+            "itemDetails": {
+                "material": str(item_details.get("material") or ""),
+                "carat": str(item_details.get("carat") or ""),
+                "size": str(item_details.get("size") or ""),
+                "length": str(item_details.get("length") or ""),
+            },
             "workDescription": str(data.get("workDescription") or "Repair order"),
             "workTemplates": self._string_list(data.get("workTemplates")),
             "totalPriceCents": self._int(payment.get("totalPriceCents")),
@@ -927,6 +934,7 @@ class SampleOrderRepository:
             "customerPhone": f"(212) 555-{phone_suffix}",
             "customerAddress": "608 5th Ave, New York, NY",
             "orderStatus": status,
+            "itemDetails": self._sample_item_details(item_type),
             "workDescription": ", ".join(templates),
             "workTemplates": templates,
             "totalPriceCents": total,
@@ -955,3 +963,13 @@ class SampleOrderRepository:
             "manualWorkNotes": "",
             "orderCodeSuffix": FirestoreOrderRepository._order_suffix(order_id),
         }
+
+    @staticmethod
+    def _sample_item_details(item_type: str) -> dict:
+        if item_type == "Ring":
+            return {"material": "Yellow Gold", "carat": "14K", "size": "7", "length": ""}
+        if item_type == "Chain":
+            return {"material": "White Gold", "carat": "18K", "size": "", "length": "18 in"}
+        if item_type == "Bracelet":
+            return {"material": "Silver", "carat": "", "size": "", "length": "7 in"}
+        return {"material": "", "carat": "", "size": "", "length": ""}

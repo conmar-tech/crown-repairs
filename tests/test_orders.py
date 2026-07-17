@@ -25,6 +25,26 @@ def test_sample_clients_aggregate_order_counts():
     assert result["items"][0]["key"].startswith(("phone:", "name:"))
 
 
+def test_sample_orders_include_item_details_for_cards():
+    repo = sample_repo()
+
+    ring = repo.list_orders(code="0001")["items"][0]
+    bracelet = repo.list_orders(code="0005")["items"][0]
+
+    assert ring["itemDetails"] == {
+        "material": "Yellow Gold",
+        "carat": "14K",
+        "size": "7",
+        "length": "",
+    }
+    assert bracelet["itemDetails"] == {
+        "material": "Silver",
+        "carat": "",
+        "size": "",
+        "length": "7 in",
+    }
+
+
 def test_sample_picked_up_can_settle_balance():
     repo = sample_repo()
     order = repo.list_orders(status="InWork")["items"][0]

@@ -293,6 +293,7 @@ function orderCard(order) {
     }
 
     const notes = order.manualWorkNotes || manualWorkNotes(order.workDescription || '', order.workTemplates || []);
+    const details = itemDetails(order);
     const payment = paymentPanel(order);
 
     const photos = document.createElement('div');
@@ -310,6 +311,12 @@ function orderCard(order) {
     }
 
     body.append(work);
+    if (details.length) {
+        const detailsLine = document.createElement('p');
+        detailsLine.className = 'item-details-line';
+        detailsLine.textContent = details.join(' | ');
+        body.append(detailsLine);
+    }
     if (notes) {
         const notesLine = document.createElement('p');
         notesLine.className = 'service-notes';
@@ -364,6 +371,20 @@ function manualWorkNotes(description, templates) {
     const prefix = templates.join(', ');
     if (!prefix || !description.startsWith(prefix)) return '';
     return description.slice(prefix.length).replace(/^:\s*/, '').trim();
+}
+
+function itemDetails(order) {
+    const source = order.itemDetails || {};
+    const values = [
+        ['Material', source.material || order.material],
+        ['Carat', source.carat || order.carat],
+        ['Size', source.size || order.itemSize],
+        ['Length', source.length || order.itemLength],
+    ];
+    return values
+        .map(([label, value]) => [label, String(value || '').trim()])
+        .filter(([, value]) => value)
+        .map(([label, value]) => `${label}: ${value}`);
 }
 
 function moneyChip(label, value, extra = '') {
